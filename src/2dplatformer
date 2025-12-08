@@ -3,6 +3,7 @@ from sys import exit
 import os
 
 #game variables
+TILE_SIZE = 32
 GAME_WIDTH = 512
 GAME_HEIGHT = 512
 
@@ -14,11 +15,21 @@ PLAYER_HEIGHT = 28
 
 #gravity
 GRAVITY = 0.5
-PLAYER_VELOCITY_Y = -10
-FLOOR_Y = GAME_HEIGHT
+FRICTION = 0.5
+PLAYER_VELOCITY_X = 5
+PLAYER_VELOCITY_Y = -12
+FLOOR_Y = GAME_HEIGHT - TILE_SIZE
 
 #images
-player_image_right = pygame.image.load(os.path.join("clown.png"))
+def load_image(image_name, scale=None):
+    image = pygame.image.load(os.path.join(image_name))
+    if scale is not None:
+        image = pygame.transform.scale(image, scale)
+    return image      
+
+background_image = load_image("background.jpg", (GAME_WIDTH, GAME_HEIGHT))
+player_image_right = load_image("clown.png", (PLAYER_WIDTH, PLAYER_HEIGHT))
+floor_tile_image = load_image("floor-tile.jpg", (TILE_SIZE, TILE_SIZE))
 
 pygame.init()
 window = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
@@ -30,14 +41,96 @@ class Player(pygame.Rect):
     def __init__(self):
         pygame.Rect.__init__(self, PLAYER_X, PLAYER_Y, PLAYER_WIDTH, PLAYER_HEIGHT)
         self.image = player_image_right
+        self.velocity_x = 0
         self.velocity_y = 0
         self.jumping = False
 
-player = Player()
+class Tile(pygame.Rect):
+    def __init__(self, x, y, image):
+        pygame.Rect.__init__(self, x, y, TILE_SIZE, TILE_SIZE)
+        self.image = image
+
+def create_map():
+    #right platform 1
+    for i in range(4):
+        tile = Tile(player.x + i*TILE_SIZE + 130, player.y + TILE_SIZE*4, floor_tile_image)
+        tiles.append(tile)
+
+    #right platform 2
+    for i in range(2):
+        tile = Tile(player.x + i*TILE_SIZE + 194, player.y + TILE_SIZE*4 - 100, floor_tile_image)
+        tiles.append(tile)
+
+    #right platform 3
+    for i in range(2):
+        tile = Tile(player.x + i*TILE_SIZE + 162, player.y + TILE_SIZE*4 - 200, floor_tile_image)
+        tiles.append(tile)      
+
+    #left platform 1
+    for i in range(4):
+        tile = Tile(player.x + i*TILE_SIZE - 256, player.y + TILE_SIZE*4, floor_tile_image)
+        tiles.append(tile)
+
+    #left platform 2
+    for i in range(3):
+        tile = Tile(player.x + i*TILE_SIZE - 192, player.y + TILE_SIZE*4 - 100, floor_tile_image)
+        tiles.append(tile)
+
+    #left platform 3
+    for i in range(2):
+        tile = Tile(player.x + i*TILE_SIZE - 256, player.y + TILE_SIZE*4 - 200, floor_tile_image)
+        tiles.append(tile)     
+
+    #floor
+    for i in range(16):
+        tile = Tile(player.x - GAME_WIDTH/2 + i*TILE_SIZE, player.y + TILE_SIZE*7, floor_tile_image)
+        tiles.append(tile)
+
+def check_tile_collision():
+    for tile in tiles:
+        if player.colliderect(tile):
+            return tile
+    return None     
+
+def check_tile_collision_x():
+    tile = check_tile_collision()
+    if tile is not None:
+        if player.velocity_x < 0:
+            player.x = tile.x + tile.width
+        elif player.velocity_x > 0:
+            player.x = tile.x - player.width
+        player.velocity_x = 0           
+
+def check_tile_collision_y():
+    tile = check_tile_collision()
+    if tile is not None:
+        if player.velocity_y < 0:
+            player.y = tile.y + tile.height
+        elif player.velocity_y > 0:
+            player.y = tile.y - player.height
+            player.jumping = False
+        player.velocity_y = 0
 
 def move():
+    if player.velocity_x < 0:
+        player.velocity_x += FRICTION
+    elif player.velocity_x > 0:
+        player.velocity_x -= FRICTION
+    else:
+        player.velocity_x = 0
+
+    player.x += player.velocity_x
+    if player.x <0:
+        player.x =0
+    elif player.x + player.width > GAME_WIDTH:
+        player.x = GAME_WIDTH - player.width
+
+    check_tile_collision_x()
+
     player.velocity_y += GRAVITY
     player.y += player.velocity_y
+    
+    check_tile_collision_y()
 
     if player.y + player.height > FLOOR_Y:
         player.y = FLOOR_Y - player.height
@@ -45,7 +138,17 @@ def move():
 
 def draw():
     window.fill("blue")
+    window.blit(background_image, (0,0))
+
+    for tile in tiles:
+        window.blit(tile.image, tile)
+
     window.blit(player.image, player)
+
+#start game
+player = Player()
+tiles = []
+create_map()
 
 while True:
     for event in pygame.event.get():
@@ -59,10 +162,10 @@ while True:
         player.jumping = True
 
     if keys[pygame.K_LEFT]:
-        player.x = max(player.x - PLAYER_DISTANCE, 0)
+        player.velocity_x = -PLAYER_VELOCITY_X
 
     if keys[pygame.K_RIGHT]:
-        player.x = min(player.x + PLAYER_DISTANCE, GAME_WIDTH - player.width)                                  
+        player.velocity_x = PLAYER_VELOCITY_X                            
 
     move()
     draw()
