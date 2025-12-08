@@ -1,21 +1,51 @@
 import pygame
 from sys import exit
+import os
 
 #game variables
 GAME_WIDTH = 512
 GAME_HEIGHT = 512
 
+PLAYER_DISTANCE = 5
+PLAYER_X = GAME_WIDTH/2
+PLAYER_Y = GAME_HEIGHT/2
+PLAYER_WIDTH = 28
+PLAYER_HEIGHT = 28
+
+#gravity
+GRAVITY = 0.5
+PLAYER_VELOCITY_Y = -10
+FLOOR_Y = GAME_HEIGHT
+
+#images
+player_image_right = pygame.image.load(os.path.join("clown.png"))
 
 pygame.init()
 window = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT))
 pygame.display.set_caption("2D Platformer")
+pygame.display.set_icon(player_image_right)
 clock = pygame.time.Clock()
 
-player = pygame.Rect(150, 150, 50, 50)
+class Player(pygame.Rect):
+    def __init__(self):
+        pygame.Rect.__init__(self, PLAYER_X, PLAYER_Y, PLAYER_WIDTH, PLAYER_HEIGHT)
+        self.image = player_image_right
+        self.velocity_y = 0
+        self.jumping = False
+
+player = Player()
+
+def move():
+    player.velocity_y += GRAVITY
+    player.y += player.velocity_y
+
+    if player.y + player.height > FLOOR_Y:
+        player.y = FLOOR_Y - player.height
+        player.jumping = False
 
 def draw():
     window.fill("blue")
-    pygame.draw.rect(window, (2, 239, 238), player)
+    window.blit(player.image, player)
 
 while True:
     for event in pygame.event.get():
@@ -24,15 +54,17 @@ while True:
             exit()
 
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_UP]:
-        player.y -= 5   
-    if keys[pygame.K_DOWN]:
-        player.y += 5  
-    if keys[pygame.K_LEFT]:
-        player.x -= 5 
-    if keys[pygame.K_RIGHT]:
-        player.x += 5                                    
+    if keys[pygame.K_UP] and not player.jumping:
+        player.velocity_y = PLAYER_VELOCITY_Y
+        player.jumping = True
 
+    if keys[pygame.K_LEFT]:
+        player.x = max(player.x - PLAYER_DISTANCE, 0)
+
+    if keys[pygame.K_RIGHT]:
+        player.x = min(player.x + PLAYER_DISTANCE, GAME_WIDTH - player.width)                                  
+
+    move()
     draw()
     pygame.display.update()   
     clock.tick(60)     
