@@ -261,7 +261,7 @@ def move():
     if player.health <= 0:
         game_over = True;         
 
-def draw():
+def main():
     window.fill("blue")
     window.blit(background_image, (0,0))
 
@@ -317,6 +317,6 @@ while True:
     
     if not game_over:
         move()
-        draw()
+        main()
         pygame.display.update()   
         clock.tick(60)     
